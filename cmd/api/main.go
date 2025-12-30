@@ -7,28 +7,39 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/anuj0x16/email-dispatcher/internal/dispatcher"
 )
 
 type config struct {
-	port int
+	port         int
+	jobQueueSize int
+	nworkers     int
 }
 
 type application struct {
-	config config
-	logger *slog.Logger
+	config     config
+	logger     *slog.Logger
+	dispatcher *dispatcher.Dispatcher
 }
 
 func main() {
 	var cfg config
 
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
+	flag.IntVar(&cfg.jobQueueSize, "job-queue-size", 100, "Job queue size")
+	flag.IntVar(&cfg.nworkers, "nworkers", 5, "Number of workers to start")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	dispatcher := dispatcher.New(cfg.jobQueueSize, cfg.nworkers)
+	dispatcher.Start()
+
 	app := &application{
-		config: cfg,
-		logger: logger,
+		config:     cfg,
+		logger:     logger,
+		dispatcher: dispatcher,
 	}
 
 	srv := &http.Server{
